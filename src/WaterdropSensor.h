@@ -5,9 +5,11 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-class WaterdropSensor {
+class WaterdropSensor
+{
 public:
-    enum DEBUG_FLAG {
+    enum DEBUG_FLAG
+    {
         DEBUG_NONE,
         DEBUG_INFO,
         DEBUG_RAW,
@@ -22,9 +24,9 @@ public:
         DEBUG_MAX
     };
 
-    using DropDetectedCallback = void(*)(void*);
+    using DropDetectedCallback = void (*)(void *);
 
-    WaterdropSensor();
+    WaterdropSensor(APDS9960 &apds);
     ~WaterdropSensor();
 
     void init(uint32_t priority = 1);
@@ -38,7 +40,7 @@ public:
     void setCrossCountTrigThreshold(int threshold);
     void setDebouceWindowSize(uint8_t count);
     void setLoopDelayMs(uint32_t ms);
-    void setDropDetectedCallback(DropDetectedCallback callback, void* context);
+    void setDropDetectedCallback(DropDetectedCallback callback, void *context);
 
     void setBoundsLR(uint8_t bound);
     void setBoundsLP(uint8_t bound);
@@ -62,6 +64,7 @@ private:
     uint8_t debugFlag;
     int dropCount;
 
+    APDS9960 &APDS;
     APDS_Data data;
     APDS_Data::data_crossing_state_t crossing_state;
 
@@ -74,5 +77,5 @@ private:
     TickType_t xLastWakeTime;
 
     DropDetectedCallback dropDetectedCallback;
-    void* callbackContext;
+    void *callbackContext;
 };

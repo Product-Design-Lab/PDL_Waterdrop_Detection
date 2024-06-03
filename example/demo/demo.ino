@@ -1,10 +1,13 @@
 #include <Arduino.h>
 #include "WaterdropSensor.h"
 
-WaterdropSensor dropSensor;
+APDS9960 apds(Wire, 9);
+WaterdropSensor dropSensor(apds);
 
-void dropDetected(void* context) {
-    Serial.println("Water drop detected!");
+void dropDetected(void *context)
+{
+    static int count = 0;
+    Serial.printf("drop detected %d\n", count++);
 }
 
 void setup()
@@ -28,17 +31,20 @@ void loop()
         char c = Serial.peek();
         if (c == 'p')
         {
-            dropSensor.pause();
+            Serial.println("paused");
+            dropSensor.deinit();
         }
         else if (c == 'r')
         {
-            dropSensor.resume();
+            Serial.println("resumed");
+            dropSensor.init();
         }
         else
         {
             int num = Serial.parseInt();
             dropSensor.setDebug(static_cast<uint8_t>(num));
         }
+        Serial.read();
     }
 
     // int count = dropSensor.getDropCount();
@@ -48,5 +54,5 @@ void loop()
     //     previousCount = count;
     // }
 
-    delay(1000);
+    delay(200);
 }

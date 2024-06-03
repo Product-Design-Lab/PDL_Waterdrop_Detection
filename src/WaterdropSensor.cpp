@@ -1,34 +1,48 @@
 #include "WaterdropSensor.h"
 #include "Adafruit_TinyUSB.h"
 
-WaterdropSensor::WaterdropSensor() 
-    : debounceWindowSize(DEFAULT_DEBOUNCE_WINDOW_SIZE), 
-      crossingCountTrigThreshhold(DEFAULT_CROSS_COUNT_TRIG_THRESHOLD), 
-      debugFlag(DEBUG_INFO), 
-      dropCount(0), 
-      dropDetectionTaskHandle(nullptr), 
-      X_FREQUENCY(pdMS_TO_TICKS(20)), 
+WaterdropSensor::WaterdropSensor(APDS9960 &apds)
+    : debounceWindowSize(DEFAULT_DEBOUNCE_WINDOW_SIZE),
+      crossingCountTrigThreshhold(DEFAULT_CROSS_COUNT_TRIG_THRESHOLD),
+      debugFlag(DEBUG_INFO),
+      dropCount(0),
+      dropDetectionTaskHandle(nullptr),
+      X_FREQUENCY(pdMS_TO_TICKS(20)),
       xLastWakeTime(0),
       dropDetectedCallback(nullptr),
-      callbackContext(nullptr)
+      callbackContext(nullptr),
+      APDS(apds)
 {
 }
 
-WaterdropSensor::~WaterdropSensor() {
+WaterdropSensor::~WaterdropSensor()
+{
     deinit();
 }
 
-void WaterdropSensor::init(uint32_t priority) {
-    if (dropDetectionTaskHandle == nullptr) {
-        xLastWakeTime = xTaskGetTickCount();
+void WaterdropSensor::init(uint32_t priority)
+{
+
+    if (dropDetectionTaskHandle == nullptr)
+    {
+        if (!APDS.begin())
+        {
+            if (debugFlag == DEBUG_INFO)
+            {
+                Serial.println("Error initializing APDS-9960 sensor!");
+            }
+            return;
+        }
         dropDetectionTaskHandle = xTaskCreateStatic(
-            dropDetectionTask, "DropDetectionTask", TASK_STACK_SIZE, this, priority, xStack, &xTaskBuffer
-        );
+            dropDetectionTask, "DropDetectionTask", TASK_STACK_SIZE, this, priority, xStack, &xTaskBuffer);
     }
 }
 
-void WaterdropSensor::deinit() {
-    if (dropDetectionTaskHandle != nullptr) {
+void WaterdropSensor::deinit()
+{
+    APDS.end();
+    if (dropDetectionTaskHandle != nullptr)
+    {
         vTaskDelete(dropDetectionTaskHandle);
         dropDetectionTaskHandle = nullptr;
     }
@@ -36,28 +50,34 @@ void WaterdropSensor::deinit() {
 
 void WaterdropSensor::resume() {
     if (dropDetectionTaskHandle != nullptr) {
+        APDS.begin();
         vTaskResume(dropDetectionTaskHandle);
     }
 }
 
 void WaterdropSensor::pause() {
     if (dropDetectionTaskHandle != nullptr) {
+        APDS.end();
         vTaskSuspend(dropDetectionTaskHandle);
     }
 }
 
-int WaterdropSensor::getDropCount() const {
+int WaterdropSensor::getDropCount() const
+{
     return dropCount;
 }
 
-void WaterdropSensor::setDropCount(int count) {
+void WaterdropSensor::setDropCount(int count)
+{
     dropCount = count;
 }
 
-void WaterdropSensor::setDebug(uint8_t debug) {
-    if (debug >= DEBUG_NONE && debug < DEBUG_MAX) {
+void WaterdropSensor::setDebug(uint8_t debug)
+{
+    if (debug >= DEBUG_NONE && debug < DEBUG_MAX)
+    {
         debugFlag = debug;
-        const char* debugMessages[] = {
+        const char *debugMessages[] = {
             "Debug mode: NONE",
             "Debug mode: INFO",
             "Debug mode: RAW",
@@ -68,51 +88,61 @@ void WaterdropSensor::setDebug(uint8_t debug) {
             "Debug mode: LR",
             "Debug mode: CROSSING_STATE_PRINT",
             "Debug mode: CROSSING_STATE_PLOT",
-            "Debug mode: FREQ"
-        };
+            "Debug mode: FREQ"};
         Serial.println(debugMessages[debugFlag]);
-    } else {
+    }
+    else
+    {
         debugFlag = DEBUG_NONE;
     }
 }
 
-void WaterdropSensor::setCrossCountTrigThreshold(int threshold) {
+void WaterdropSensor::setCrossCountTrigThreshold(int threshold)
+{
     crossingCountTrigThreshhold = threshold;
 }
 
-void WaterdropSensor::setDebouceWindowSize(uint8_t count) {
+void WaterdropSensor::setDebouceWindowSize(uint8_t count)
+{
     debounceWindowSize = count;
 }
 
-void WaterdropSensor::setLoopDelayMs(uint32_t ms) {
+void WaterdropSensor::setLoopDelayMs(uint32_t ms)
+{
     X_FREQUENCY = pdMS_TO_TICKS(ms);
 }
 
-void WaterdropSensor::setBoundsLR(uint8_t bound) {
+void WaterdropSensor::setBoundsLR(uint8_t bound)
+{
     data.set_bounds_lr(static_cast<int>(bound), static_cast<int>(-bound));
 }
 
-void WaterdropSensor::setBoundsLP(uint8_t bound) {
+void WaterdropSensor::setBoundsLP(uint8_t bound)
+{
     data.u.set_bounds_lp(static_cast<int>(bound), static_cast<int>(-bound));
     data.d.set_bounds_lp(static_cast<int>(bound), static_cast<int>(-bound));
     data.l.set_bounds_lp(static_cast<int>(bound), static_cast<int>(-bound));
     data.r.set_bounds_lp(static_cast<int>(bound), static_cast<int>(-bound));
 }
 
-void WaterdropSensor::setBoundsDot(uint8_t bound) {
+void WaterdropSensor::setBoundsDot(uint8_t bound)
+{
     data.u.set_bounds_dot(static_cast<int>(bound), static_cast<int>(-bound));
     data.d.set_bounds_dot(static_cast<int>(bound), static_cast<int>(-bound));
     data.l.set_bounds_dot(static_cast<int>(bound), static_cast<int>(-bound));
     data.r.set_bounds_dot(static_cast<int>(bound), static_cast<int>(-bound));
 }
 
-void WaterdropSensor::setDropDetectedCallback(DropDetectedCallback callback, void* context) {
+void WaterdropSensor::setDropDetectedCallback(DropDetectedCallback callback, void *context)
+{
     dropDetectedCallback = callback;
     callbackContext = context;
 }
 
-void WaterdropSensor::printDebug() {
-    switch (debugFlag) {
+void WaterdropSensor::printDebug()
+{
+    switch (debugFlag)
+    {
     case DEBUG_RAW:
         data.printRaw();
         break;
@@ -145,23 +175,17 @@ void WaterdropSensor::printDebug() {
     }
 }
 
-void WaterdropSensor::dropDetectionTask(void *pvParameters) {
+void WaterdropSensor::dropDetectionTask(void *pvParameters)
+{
     WaterdropSensor *sensor = static_cast<WaterdropSensor *>(pvParameters);
-    int _debounce_sample_count = 0;
-    if (!APDS.begin()) {
-        if (sensor->debugFlag == DEBUG_INFO) {
-            Serial.println("Error initializing APDS-9960 sensor!");
-        }
-        vTaskDelete(nullptr);
-        return;
-    }
-
-    while (true) {
+    while (true)
+    {
         sensor->runMainTaskLogic();
     }
 }
 
-void WaterdropSensor::runMainTaskLogic() {
+void WaterdropSensor::runMainTaskLogic()
+{
     static int _debounce_sample_count = 0;
 
     vTaskDelayUntil(&xLastWakeTime, X_FREQUENCY);
@@ -174,17 +198,20 @@ void WaterdropSensor::runMainTaskLogic() {
 
     _debounce_sample_count += data.sample_count;
 
-    if (_debounce_sample_count >= debounceWindowSize) {
+    if (_debounce_sample_count >= debounceWindowSize)
+    {
         uint8_t dot_crossing_count = crossing_state.u.DOT_CROSS_UPPER_BOUND + crossing_state.u.DOT_CROSS_LOWER_BOUND +
                                      crossing_state.d.DOT_CROSS_UPPER_BOUND + crossing_state.d.DOT_CROSS_LOWER_BOUND +
                                      crossing_state.l.DOT_CROSS_UPPER_BOUND + crossing_state.l.DOT_CROSS_LOWER_BOUND +
                                      crossing_state.r.DOT_CROSS_UPPER_BOUND + crossing_state.r.DOT_CROSS_LOWER_BOUND;
 
-        if (dot_crossing_count > 2) {
+        if (dot_crossing_count > DEFAULT_CROSS_COUNT_TRIG_THRESHOLD)
+        {
             dropCount++;
             _debounce_sample_count = 0;
             crossing_state.state = 0;
-            if (dropDetectedCallback) {
+            if (dropDetectedCallback)
+            {
                 dropDetectedCallback(callbackContext);
             }
         }
