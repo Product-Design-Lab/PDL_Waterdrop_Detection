@@ -4,6 +4,7 @@
 #include <Arduino_APDS9960.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include <stdarg.h>
 
 class WaterdropSensor
 {
@@ -48,6 +49,7 @@ public:
 
 private:
     void printDebug();
+    void debugPrintf(const char *format, ...);
     static void dropDetectionTask(void *pvParameters);
     void runMainTaskLogic();
 

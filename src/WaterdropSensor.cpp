@@ -22,43 +22,82 @@ WaterdropSensor::~WaterdropSensor()
 
 void WaterdropSensor::init(uint32_t priority)
 {
-
-    if (dropDetectionTaskHandle == nullptr)
+    eTaskState task_state = eTaskGetState(dropDetectionTaskHandle);
+    if (dropDetectionTaskHandle == nullptr || task_state == eInvalid || task_state == eDeleted)
     {
         if (!APDS.begin())
         {
-            if (debugFlag == DEBUG_INFO)
-            {
-                Serial.println("Error initializing APDS-9960 sensor!");
-            }
+            debugPrintf("Error initializing APDS-9960 sensor!\n");
             return;
+        }
+        else
+        {
+            debugPrintf("APDS-9960 sensor initialized\n");
         }
         dropDetectionTaskHandle = xTaskCreateStatic(
             dropDetectionTask, "DropDetectionTask", TASK_STACK_SIZE, this, priority, xStack, &xTaskBuffer);
+    }
+    else
+    {
+        debugPrintf("Drop detection task already created\n");
     }
 }
 
 void WaterdropSensor::deinit()
 {
-    APDS.end();
-    if (dropDetectionTaskHandle != nullptr)
+    eTaskState task_state = eTaskGetState(dropDetectionTaskHandle);
+    if (task_state != eDeleted && task_state != eInvalid)
     {
+        if (task_state != eSuspended)
+        {
+            APDS.end(); // end() is not idempotent, calling it a second time will cause a crash
+        }
         vTaskDelete(dropDetectionTaskHandle);
-        dropDetectionTaskHandle = nullptr;
+        debugPrintf("Drop detection task deleted\n");
+    }
+    else
+    {
+        debugPrintf("Drop detection task already deleted\n");
     }
 }
 
-void WaterdropSensor::resume() {
-    if (dropDetectionTaskHandle != nullptr) {
+void WaterdropSensor::resume()
+{
+    eTaskState task_state = eTaskGetState(dropDetectionTaskHandle);
+    if (task_state == eSuspended)
+    {
         APDS.begin();
         vTaskResume(dropDetectionTaskHandle);
+        debugPrintf("Resuming drop detection task\n");
+    }
+    else if (task_state == eRunning || task_state == eReady || task_state == eBlocked)
+    {
+        debugPrintf("drop detection task already running\n");
+    }
+    else
+    {
+        debugPrintf("drop detection task in state %d, cannot resume\n", (int)task_state);
     }
 }
 
-void WaterdropSensor::pause() {
-    if (dropDetectionTaskHandle != nullptr) {
+void WaterdropSensor::pause()
+{
+    eTaskState task_state = eTaskGetState(dropDetectionTaskHandle);
+    if (task_state == eDeleted || task_state == eInvalid)
+    {
+        debugPrintf("Drop detection task not created\n");
+        return;
+    }
+    else if (task_state == eSuspended)
+    {
+        debugPrintf("drop detection task already suspended\n");
+        return;
+    }
+    else
+    {
         APDS.end();
         vTaskSuspend(dropDetectionTaskHandle);
+        debugPrintf("Suspending drop detection task\n");
     }
 }
 
@@ -172,6 +211,17 @@ void WaterdropSensor::printDebug()
         break;
     default:
         break;
+    }
+}
+
+void WaterdropSensor::debugPrintf(const char *format, ...)
+{
+    if (debugFlag == DEBUG_INFO)
+    {
+        va_list args;
+        va_start(args, format);
+        vprintf(format, args);
+        va_end(args);
     }
 }
 
