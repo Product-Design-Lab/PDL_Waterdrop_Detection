@@ -18,8 +18,10 @@ void setup()
         ; // Wait for serial port to connect
     }
 
-    dropSensor.init();
+    dropSensor.setDebug(WaterdropSensor::DEBUG_INFO);
+    dropSensor.setCrossCountTrigThreshold(4);
     dropSensor.setDropDetectedCallback(dropDetected, nullptr);
+    dropSensor.init();
 }
 
 int previousCount = 0;
@@ -31,12 +33,22 @@ void loop()
         char c = Serial.peek();
         if (c == 'p')
         {
-            Serial.println("paused");
-            dropSensor.deinit();
+            Serial.println("pause");
+            dropSensor.pause();
         }
         else if (c == 'r')
         {
-            Serial.println("resumed");
+            Serial.println("resume");
+            dropSensor.resume();
+        }
+        else if(c== 'd')
+        {
+            Serial.println("delete");
+            dropSensor.deinit();
+        }
+        else if(c == 'i')
+        {
+            Serial.println("init");
             dropSensor.init();
         }
         else
@@ -53,6 +65,6 @@ void loop()
     //     Serial.printf("dropCount=%d\n", count);
     //     previousCount = count;
     // }
-
-    delay(200);
+    Serial.println("running");
+    delay(1000);
 }
