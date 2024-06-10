@@ -30,9 +30,10 @@ public:
             APDS_Channel::channel_crossing_state_t d;
             APDS_Channel::channel_crossing_state_t l;
             APDS_Channel::channel_crossing_state_t r;
+            channel_pair_crossing_state_t ud;
             channel_pair_crossing_state_t lr;
         } __attribute__((packed));
-        uint32_t state : 20;
+        uint32_t state : 24;
     };
 
 public:
@@ -44,17 +45,25 @@ public:
     int sample_count;
 
 private:
-    int lr_diff[MAX_SAMPLES];
-    int lr_diff_prev;
-    int up_b_lr, low_b_lr;
+    int lr_diff[MAX_SAMPLES]; // difference between left and right channel
+    int lr_diff_prev;         // previous value of lr_diff
+    int up_b_lr, low_b_lr;    // upper and lower bounds for lr_diff
+
+    int ud_diff[MAX_SAMPLES]; // difference between up and down channel
+    int ud_diff_prev;         // previous value of ud_diff
+    int up_b_ud, low_b_ud;    // upper and lower bounds for ud_diff
+
     data_crossing_state_t crossing_state;
+    channel_pair_crossing_state_t check_ud_crossing_state();
     channel_pair_crossing_state_t check_lr_crossing_state();
+    channel_pair_crossing_state_t compute_ud_diff();
     channel_pair_crossing_state_t compute_lr_diff();
 
 public:
     // constructor
     APDS_Data();
     void set_bounds_lr(const int up_b_lr, const int low_b_lr);
+    void set_bounds_ud(const int up_b_ud, const int low_b_ud);
     data_crossing_state_t process_all_channel();
     data_crossing_state_t get_crossing_state();
 
@@ -63,7 +72,7 @@ public:
     void printRaw_i32();
     void printLP();
     void printDot();
-    void printLR();
+    void printPair();
     void printCrossingState(uint32_t val);
     void plotCrossingState(uint32_t val);
 };

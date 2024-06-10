@@ -13,6 +13,9 @@ WaterdropSensor::WaterdropSensor(APDS9960 &apds)
       callbackContext(nullptr),
       APDS(apds)
 {
+    setBoundsDot(DEFAULT_DOT_THRESHOLD);
+    setBoundsLP(DEFAULT_LP_THRESHOLD);
+    setBoundsLR(DEFAULT_PAIR_THRESHOLD);
 }
 
 WaterdropSensor::~WaterdropSensor()
@@ -197,14 +200,17 @@ void WaterdropSensor::printDebug()
     case DEBUG_DOT:
         data.printDot();
         break;
-    case DEBUG_LR:
-        data.printLR();
+    case DEBUG_PAIR:
+        data.printPair();
         break;
     case DEBUG_CROSSING_STATE_PRINT:
         data.printCrossingState(crossing_state.state);
         break;
     case DEBUG_CROSSING_STATE_PLOT:
         data.plotCrossingState(crossing_state.state);
+        break;
+    case DEBUG_THRESHOLD:
+        Serial.printf("lp:%d|%d, dot:%d|%d, pair:%d|%d\n", lp_crossing_count, crossingCountTrigThreshhold, dot_crossing_count, crossingCountTrigThreshhold, pair_crossing_count, crossingCountTrigThreshhold);
         break;
     case DEBUG_FREQ:
         Serial.printf("xLastWakeTime=%d, sample_count=%d\n", xLastWakeTime, data.sample_count);
@@ -250,12 +256,39 @@ void WaterdropSensor::runMainTaskLogic()
 
     if (_debounce_sample_count >= debounceWindowSize)
     {
-        uint8_t dot_crossing_count = crossing_state.u.DOT_CROSS_UPPER_BOUND + crossing_state.u.DOT_CROSS_LOWER_BOUND +
-                                     crossing_state.d.DOT_CROSS_UPPER_BOUND + crossing_state.d.DOT_CROSS_LOWER_BOUND +
-                                     crossing_state.l.DOT_CROSS_UPPER_BOUND + crossing_state.l.DOT_CROSS_LOWER_BOUND +
-                                     crossing_state.r.DOT_CROSS_UPPER_BOUND + crossing_state.r.DOT_CROSS_LOWER_BOUND;
+        dot_crossing_count = crossing_state.u.DOT_CROSS_UPPER_BOUND +
+                             crossing_state.u.DOT_CROSS_LOWER_BOUND +
+                             crossing_state.d.DOT_CROSS_UPPER_BOUND +
+                             crossing_state.d.DOT_CROSS_LOWER_BOUND +
+                             crossing_state.l.DOT_CROSS_UPPER_BOUND +
+                             crossing_state.l.DOT_CROSS_LOWER_BOUND +
+                             crossing_state.r.DOT_CROSS_UPPER_BOUND +
+                             crossing_state.r.DOT_CROSS_LOWER_BOUND +
+                             0;
 
-        if (dot_crossing_count > DEFAULT_CROSS_COUNT_TRIG_THRESHOLD)
+        lp_crossing_count = crossing_state.u.LP_CROSS_UPPER_BOUND +
+                            crossing_state.u.LP_CROSS_LOWER_BOUND +
+                            crossing_state.d.LP_CROSS_UPPER_BOUND +
+                            crossing_state.d.LP_CROSS_LOWER_BOUND +
+                            crossing_state.l.LP_CROSS_UPPER_BOUND +
+                            crossing_state.l.LP_CROSS_LOWER_BOUND +
+                            crossing_state.r.LP_CROSS_UPPER_BOUND +
+                            crossing_state.r.LP_CROSS_LOWER_BOUND +
+                            0;
+
+        pair_crossing_count = crossing_state.ud.RISE_OVER_UPPER_BOUND +
+                              crossing_state.ud.FALL_BELOW_UPPER_BOUND +
+                              crossing_state.ud.RISE_OVER_LOWER_BOUND +
+                              crossing_state.ud.FALL_BELOW_LOWER_BOUND +
+                              crossing_state.lr.RISE_OVER_UPPER_BOUND +
+                              crossing_state.lr.FALL_BELOW_UPPER_BOUND +
+                              crossing_state.lr.RISE_OVER_LOWER_BOUND +
+                              crossing_state.lr.FALL_BELOW_LOWER_BOUND +
+                              0;
+
+        if (dot_crossing_count > crossingCountTrigThreshhold ||
+            lp_crossing_count > crossingCountTrigThreshhold ||
+            pair_crossing_count > crossingCountTrigThreshhold)
         {
             dropCount++;
             _debounce_sample_count = 0;

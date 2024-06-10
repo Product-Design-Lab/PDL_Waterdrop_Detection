@@ -18,9 +18,10 @@ public:
         DEBUG_ZEROING,
         DEBUG_LOWPASS,
         DEBUG_DOT,
-        DEBUG_LR,
+        DEBUG_PAIR,
         DEBUG_CROSSING_STATE_PRINT,
         DEBUG_CROSSING_STATE_PLOT,
+        DEBUG_THRESHOLD,
         DEBUG_FREQ,
         DEBUG_MAX
     };
@@ -53,9 +54,9 @@ private:
     static void dropDetectionTask(void *pvParameters);
     void runMainTaskLogic();
 
-    constexpr static uint8_t DEFAULT_LR_THRESHOLD = 4;
+    constexpr static uint8_t DEFAULT_PAIR_THRESHOLD = 4;
     constexpr static uint8_t DEFAULT_LP_THRESHOLD = 6;
-    constexpr static float DEFAULT_DOT_THRESHOLD = 2.5;
+    constexpr static uint8_t DEFAULT_DOT_THRESHOLD = 3;
     constexpr static uint32_t TASK_STACK_SIZE = 2048;
     constexpr static uint8_t MAX_LOOP_DELAY_MS = 80;
     constexpr static int DEFAULT_DEBOUNCE_WINDOW_SIZE = 100;
@@ -65,6 +66,10 @@ private:
     int crossingCountTrigThreshhold;
     uint8_t debugFlag;
     int dropCount;
+
+    uint8_t dot_crossing_count;
+    uint8_t lp_crossing_count;
+    uint8_t pair_crossing_count;
 
     APDS9960 &APDS;
     APDS_Data data;

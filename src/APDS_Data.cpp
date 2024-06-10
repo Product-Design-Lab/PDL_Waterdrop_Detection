@@ -7,6 +7,38 @@ void APDS_Data::set_bounds_lr(const int up_b_lr, const int low_b_lr)
     this->low_b_lr = low_b_lr;
 }
 
+void APDS_Data::set_bounds_ud(const int up_b_ud, const int low_b_ud)
+{
+    this->up_b_ud = up_b_ud;
+    this->low_b_ud = low_b_ud;
+}
+
+APDS_Data::channel_pair_crossing_state_t APDS_Data::compute_ud_diff()
+{
+    ud_diff[0] = ud_diff_prev;
+    for (int i = 0; i <= sample_count; i++)
+    {
+        ud_diff[i + 1] = u.get_lp()[i] - d.get_lp()[i];
+        // Serial.printf("ud_diff[%d]:%d\n", i, ud_diff[i]);
+    }
+    ud_diff_prev = ud_diff[sample_count];
+
+    return check_ud_crossing_state();
+}
+
+APDS_Data::channel_pair_crossing_state_t APDS_Data::check_ud_crossing_state()
+{
+    channel_pair_crossing_state_t state = {};
+    for (int i = 0; i < sample_count; i++)
+    {
+        state.RISE_OVER_UPPER_BOUND |= (bool)(ud_diff[i] < up_b_ud && ud_diff[i + 1] > up_b_ud);
+        state.FALL_BELOW_UPPER_BOUND |= (bool)(ud_diff[i] > up_b_ud && ud_diff[i + 1] < up_b_ud);
+        state.RISE_OVER_LOWER_BOUND |= (bool)(ud_diff[i] > low_b_ud && ud_diff[i + 1] < low_b_ud);
+        state.FALL_BELOW_LOWER_BOUND |= (bool)(ud_diff[i] < low_b_ud && ud_diff[i + 1] > low_b_ud);
+    }
+    return state;
+}
+
 APDS_Data::channel_pair_crossing_state_t APDS_Data::compute_lr_diff()
 {
     lr_diff[0] = lr_diff_prev;
@@ -40,6 +72,7 @@ APDS_Data::data_crossing_state_t APDS_Data::process_all_channel()
     temp_state.d.state = d.process_single_channel(sample_count).state;
     temp_state.l.state = l.process_single_channel(sample_count).state;
     temp_state.r.state = r.process_single_channel(sample_count).state;
+    temp_state.ud.state = compute_ud_diff().state;
     temp_state.lr.state = compute_lr_diff().state;
 
     crossing_state.state |= temp_state.state;
@@ -91,11 +124,11 @@ void APDS_Data::printDot()
     }
 }
 
-void APDS_Data::printLR()
+void APDS_Data::printPair()
 {
     for (int i = 0; i < sample_count; i++)
     {
-        Serial.printf("l-r:%d\n", lr_diff[i]);
+        Serial.printf("l-r:%d, u-d:%d\n", lr_diff[i], ud_diff[i]);
     }
 }
 
@@ -121,26 +154,26 @@ void APDS_Data::plotCrossingState(uint32_t val)
 {
     // give each bit a name for better readability, plot each bit
     const char *names[] = {
-        "U_U",
-        "U_D",
-        "DU_U",
-        "DU_D",
-        "D_U",
-        "D_D",
-        "DD_U",
-        "DD_D",
-        "L_U",
-        "L_D",
-        "DL_U",
-        "DL_D",
-        "R_U",
-        "R_D",
-        "DR_U",
-        "DR_D",
-        "LR_RU",
-        "LR_FU",
-        "LR_RL",
-        "LR_FL",
+        "U_U",   // up channel cross upper bound
+        "U_D",   // up channel cross lower bound
+        "DU_U",  // difference in up channel cross upper bound
+        "DU_D",  // difference in up channel cross lower bound
+        "D_U",   // down channel cross upper bound
+        "D_D",   // down channel cross lower bound
+        "DD_U",  // difference in down channel cross upper bound
+        "DD_D",  // difference in down channel cross lower bound
+        "L_U",   // left channel cross upper bound
+        "L_D",   // left channel cross lower bound
+        "DL_U",  // difference in left channel cross upper bound
+        "DL_D",  // difference in left channel cross lower bound
+        "R_U",   // right channel cross upper bound
+        "R_D",   // right channel cross lower bound
+        "DR_U",  // difference in right channel cross upper bound
+        "DR_D",  // difference in right channel cross lower bound
+        "LR_RU", // difference in left and right channel rise above upper bound
+        "LR_FU", // difference in left and right channel fall below upper bound
+        "LR_RL", // difference in left and right channel rise above lower bound
+        "LR_FL", // difference in left and right channel fall below lower bound
     };
     for (int i = 0; i < 20; i++)
     {

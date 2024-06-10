@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "WaterdropSensor.h"
 
-APDS9960 apds(Wire, 9);
+APDS9960 apds(Wire, -1);
 WaterdropSensor dropSensor(apds);
 
 void dropDetected(void *context)
