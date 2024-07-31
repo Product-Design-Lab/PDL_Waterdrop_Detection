@@ -181,6 +181,11 @@ void WaterdropSensor::setDropDetectedCallback(DropDetectedCallback callback, voi
     callbackContext = context;
 }
 
+void WaterdropSensor::setSensorDataCrossingCallback(SensorEventCallback callback)
+{
+    sensorEventCallback = callback;
+}
+
 void WaterdropSensor::printDebug()
 {
     switch (debugFlag)
@@ -250,41 +255,26 @@ void WaterdropSensor::runMainTaskLogic()
     data.process_all_channel();
     crossing_state.state = data.get_crossing_state().state;
 
+    // detect sensor event and call callback
+    static APDS_Data::data_crossing_state_t state_prev = crossing_state;
+    if (state_prev.state != crossing_state.state)
+    {
+        state_prev.state = crossing_state.state;
+        if (sensorEventCallback)
+        {
+            sensorEventCallback(crossing_state);
+        }
+    }
+
     printDebug();
 
     _debounce_sample_count += data.sample_count;
 
     if (_debounce_sample_count >= debounceWindowSize)
     {
-        dot_crossing_count = crossing_state.u.DOT_CROSS_UPPER_BOUND +
-                             crossing_state.u.DOT_CROSS_LOWER_BOUND +
-                             crossing_state.d.DOT_CROSS_UPPER_BOUND +
-                             crossing_state.d.DOT_CROSS_LOWER_BOUND +
-                             crossing_state.l.DOT_CROSS_UPPER_BOUND +
-                             crossing_state.l.DOT_CROSS_LOWER_BOUND +
-                             crossing_state.r.DOT_CROSS_UPPER_BOUND +
-                             crossing_state.r.DOT_CROSS_LOWER_BOUND +
-                             0;
-
-        lp_crossing_count = crossing_state.u.LP_CROSS_UPPER_BOUND +
-                            crossing_state.u.LP_CROSS_LOWER_BOUND +
-                            crossing_state.d.LP_CROSS_UPPER_BOUND +
-                            crossing_state.d.LP_CROSS_LOWER_BOUND +
-                            crossing_state.l.LP_CROSS_UPPER_BOUND +
-                            crossing_state.l.LP_CROSS_LOWER_BOUND +
-                            crossing_state.r.LP_CROSS_UPPER_BOUND +
-                            crossing_state.r.LP_CROSS_LOWER_BOUND +
-                            0;
-
-        pair_crossing_count = crossing_state.ud.RISE_OVER_UPPER_BOUND +
-                              crossing_state.ud.FALL_BELOW_UPPER_BOUND +
-                              crossing_state.ud.RISE_OVER_LOWER_BOUND +
-                              crossing_state.ud.FALL_BELOW_LOWER_BOUND +
-                              crossing_state.lr.RISE_OVER_UPPER_BOUND +
-                              crossing_state.lr.FALL_BELOW_UPPER_BOUND +
-                              crossing_state.lr.RISE_OVER_LOWER_BOUND +
-                              crossing_state.lr.FALL_BELOW_LOWER_BOUND +
-                              0;
+        dot_crossing_count = data.sum_dot_cross_count(crossing_state);
+        lp_crossing_count = data.sum_lp_cross_count(crossing_state);
+        pair_crossing_count = data.sum_pair_cross_count(crossing_state);
 
         if (dot_crossing_count > crossingCountTrigThreshhold ||
             lp_crossing_count > crossingCountTrigThreshhold ||

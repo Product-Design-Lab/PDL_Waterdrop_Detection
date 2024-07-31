@@ -4,9 +4,8 @@
 
 class APDS_Data
 {
-public:
-    union channel_pair_crossing_state_t
-    {
+  public:
+    union channel_pair_crossing_state_t {
         struct
         {
             bool RISE_OVER_UPPER_BOUND : 1;
@@ -22,8 +21,7 @@ public:
      | reserved | lr_state | r_state | l_state | d_state | u_state |
      |  32 - 20 |  19 - 16 | 15 - 12 |  11 - 8 |  7 - 4  |  3 - 0  |
     */
-    union data_crossing_state_t
-    {
+    union data_crossing_state_t {
         struct
         {
             APDS_Channel::channel_crossing_state_t u;
@@ -36,7 +34,7 @@ public:
         uint32_t state : 24;
     };
 
-public:
+  public:
     APDS_Channel u;
     APDS_Channel d;
     APDS_Channel l;
@@ -44,7 +42,7 @@ public:
 
     int sample_count;
 
-private:
+  private:
     int lr_diff[MAX_SAMPLES]; // difference between left and right channel
     int lr_diff_prev;         // previous value of lr_diff
     int up_b_lr, low_b_lr;    // upper and lower bounds for lr_diff
@@ -59,13 +57,18 @@ private:
     channel_pair_crossing_state_t compute_ud_diff();
     channel_pair_crossing_state_t compute_lr_diff();
 
-public:
+  public:
     // constructor
     APDS_Data();
     void set_bounds_lr(const int up_b_lr, const int low_b_lr);
     void set_bounds_ud(const int up_b_ud, const int low_b_ud);
     data_crossing_state_t process_all_channel();
     data_crossing_state_t get_crossing_state();
+
+    // helper function to be used in the callback or non-class function
+    static int sum_lp_cross_count(data_crossing_state_t state);
+    static int sum_dot_cross_count(data_crossing_state_t state);
+    static int sum_pair_cross_count(data_crossing_state_t state);
 
     void printRaw();
     void printCalib();

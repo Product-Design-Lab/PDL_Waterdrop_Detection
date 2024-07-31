@@ -27,6 +27,7 @@ public:
     };
 
     using DropDetectedCallback = void (*)(void *);
+    using SensorEventCallback = void (*)(APDS_Data::data_crossing_state_t state);
 
     WaterdropSensor(APDS9960 &apds);
     ~WaterdropSensor();
@@ -43,6 +44,7 @@ public:
     void setDebouceWindowSize(uint8_t count);
     void setLoopDelayMs(uint32_t ms);
     void setDropDetectedCallback(DropDetectedCallback callback, void *context);
+    void setSensorDataCrossingCallback(SensorEventCallback callback);
 
     void setBoundsLR(uint8_t bound);
     void setBoundsLP(uint8_t bound);
@@ -83,6 +85,7 @@ private:
     TickType_t X_FREQUENCY;
     TickType_t xLastWakeTime;
 
-    DropDetectedCallback dropDetectedCallback;
+    DropDetectedCallback dropDetectedCallback = nullptr;
+    SensorEventCallback sensorEventCallback = nullptr;
     void *callbackContext;
 };

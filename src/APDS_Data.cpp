@@ -86,6 +86,30 @@ APDS_Data::data_crossing_state_t APDS_Data::get_crossing_state()
     return state;
 }
 
+int APDS_Data::sum_lp_cross_count(data_crossing_state_t state)
+{
+    int sum = state.u.LP_CROSS_UPPER_BOUND + state.u.LP_CROSS_LOWER_BOUND + state.d.LP_CROSS_UPPER_BOUND +
+              state.d.LP_CROSS_LOWER_BOUND + state.l.LP_CROSS_UPPER_BOUND + state.l.LP_CROSS_LOWER_BOUND +
+              state.r.LP_CROSS_UPPER_BOUND + state.r.LP_CROSS_LOWER_BOUND;
+    return sum;
+}
+
+int APDS_Data::sum_dot_cross_count(data_crossing_state_t state)
+{
+    int sum = state.u.DOT_CROSS_UPPER_BOUND + state.u.DOT_CROSS_LOWER_BOUND + state.d.DOT_CROSS_UPPER_BOUND +
+              state.d.DOT_CROSS_LOWER_BOUND + state.l.DOT_CROSS_UPPER_BOUND + state.l.DOT_CROSS_LOWER_BOUND +
+              state.r.DOT_CROSS_UPPER_BOUND + state.r.DOT_CROSS_LOWER_BOUND;
+    return sum;
+}
+
+int APDS_Data::sum_pair_cross_count(data_crossing_state_t state)
+{
+    int sum = state.ud.RISE_OVER_UPPER_BOUND + state.ud.FALL_BELOW_UPPER_BOUND + state.ud.RISE_OVER_LOWER_BOUND +
+              state.ud.FALL_BELOW_LOWER_BOUND + state.lr.RISE_OVER_UPPER_BOUND + state.lr.FALL_BELOW_UPPER_BOUND +
+              state.lr.RISE_OVER_LOWER_BOUND + state.lr.FALL_BELOW_LOWER_BOUND;
+    return sum;
+}
+
 void APDS_Data::printRaw()
 {
     for (int i = 0; i < sample_count; i++)
